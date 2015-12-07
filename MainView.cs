@@ -78,8 +78,10 @@ namespace VoiceRecognition
         void engineSpeechRecognizer(object sender, SpeechRecognizedEventArgs e)
         {
             SemanticValue semantics = e.Result.Semantics;
-            //string rawText = e.Result.Text;
-            //RecognitionResult result = e.Result();
+            string rawText = e.Result.Text;
+            // RecognitionResult result = e.Result;
+
+            this.statusLabel.Text = rawText;
 
             if (semantics.ContainsKey("brightness"))
             {
@@ -88,7 +90,7 @@ namespace VoiceRecognition
             }
             else if (semantics.ContainsKey("contrast"))
             {
-                Image tmpImage = SetContrast((double)semantics["contrast"].Value);
+                Image tmpImage = SetContrast(Convert.ToDouble(semantics["contrast"].Value));
                 imageList.Add(tmpImage);
             }
             else if (semantics.ContainsKey("grayscale"))
@@ -128,7 +130,7 @@ namespace VoiceRecognition
                     imageList.RemoveAt(imageList.Count - 1);
                 }
                 else {
-                    synthesizer.Speak("There is no more redo actions.");
+                    synthesizer.Speak("There is no more undo actions.");
                 }
             }
 
@@ -171,8 +173,7 @@ namespace VoiceRecognition
                     if (cB < 0) cB = 1;
                     if (cB > 255) cB = 255;
 
-                    bmap.SetPixel(i, j,
-        Color.FromArgb((byte)cR, (byte)cG, (byte)cB));
+                    bmap.SetPixel(i, j, Color.FromArgb((byte)cR, (byte)cG, (byte)cB));
                 }
             }
             return (Image)bmap;
@@ -269,24 +270,7 @@ namespace VoiceRecognition
                     nPixelR = c.R - (255 - color.R);
                     nPixelG = c.G - (255 - color.G);
                     nPixelB = c.B - (255 - color.B);
-                    //if (color == Color.Red)
-                    //{
-                    //    nPixelR = c.R;
-                    //    nPixelG = c.G - 255;
-                    //    nPixelB = c.B - 255;
-                    //}
-                    //else if (color == Color.Green)
-                    //{
-                    //    nPixelR = c.R - 255;
-                    //    nPixelG = c.G;
-                    //    nPixelB = c.B - 255;
-                    //}
-                    //else if (color == Color.Blue)
-                    //{
-                    //    nPixelR = c.R - 255;
-                    //    nPixelG = c.G - 255;
-                    //    nPixelB = c.B;
-                    //}
+
                     nPixelR = Math.Max(nPixelR, 0);
                     nPixelR = Math.Min(255, nPixelR);
 
@@ -304,50 +288,21 @@ namespace VoiceRecognition
         }
 
         /* GRAMMARS */
-        private Grammar ContrastGrammar()
-        {
-            // Change/Set Contrast to Choices
-            var choices = new Choices();
-            for (var i = -100; i <= 100; i++)
-            {
-                choices.Add(i.ToString());
-            }
-
-            GrammarBuilder changeGrammar = "Change";
-            GrammarBuilder setGrammar = "Set";
-            GrammarBuilder contrastGrammar = "Contrast";
-            GrammarBuilder toGrammar = "To";
-            var choicesGramar = new GrammarBuilder(choices);
-
-            SemanticResultKey resultKey = new SemanticResultKey("contrast", choices);
-            GrammarBuilder resultContrast = new GrammarBuilder(resultKey);
-
-            Choices alternatives = new Choices(changeGrammar, setGrammar);
-
-            GrammarBuilder result = new GrammarBuilder(alternatives);
-            result.Append(contrastGrammar);
-            result.Append(toGrammar);
-            result.Append(resultContrast);
-
-            Grammar grammar = new Grammar(result);
-            grammar.Name = "Set Contrast";
-            return grammar;
-        }
-
         private Grammar BrightnessGrammar()
         {
             // Change/Set Brightness to Choices
             var choices = new Choices();
             for (var i = -255; i <= 255; i++)
             {
-                choices.Add(i.ToString());
+                SemanticResultValue choiceResultValue = new SemanticResultValue(i.ToString(), i);
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                choices.Add(resultValueBuilder);
             }
 
             GrammarBuilder changeGrammar = "Change";
             GrammarBuilder setGrammar = "Set";
             GrammarBuilder brightnessGrammar = "Brightness";
             GrammarBuilder toGrammar = "To";
-            var choicesGramar = new GrammarBuilder(choices);
 
             SemanticResultKey resultKey = new SemanticResultKey("brightness", choices);
             GrammarBuilder resultContrast = new GrammarBuilder(resultKey);
@@ -356,6 +311,37 @@ namespace VoiceRecognition
 
             GrammarBuilder result = new GrammarBuilder(alternatives);
             result.Append(brightnessGrammar);
+            result.Append(toGrammar);
+            result.Append(resultContrast);
+
+            Grammar grammar = new Grammar(result);
+            grammar.Name = "Set Brightness";
+            return grammar;
+        }
+
+        private Grammar ContrastGrammar()
+        {
+            // Change/Set Contrast to Choices
+            var choices = new Choices();
+            for (var i = -100; i <= 100; i++)
+            {
+                SemanticResultValue choiceResultValue = new SemanticResultValue(i.ToString(), i);
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                choices.Add(resultValueBuilder);
+            }
+
+            GrammarBuilder changeGrammar = "Change";
+            GrammarBuilder setGrammar = "Set";
+            GrammarBuilder contrastGrammar = "Contrast";
+            GrammarBuilder toGrammar = "To";
+
+            SemanticResultKey resultKey = new SemanticResultKey("contrast", choices);
+            GrammarBuilder resultContrast = new GrammarBuilder(resultKey);
+
+            Choices alternatives = new Choices(changeGrammar, setGrammar);
+
+            GrammarBuilder result = new GrammarBuilder(alternatives);
+            result.Append(contrastGrammar);
             result.Append(toGrammar);
             result.Append(resultContrast);
 
@@ -392,17 +378,13 @@ namespace VoiceRecognition
         {
             // Invert Image
             GrammarBuilder invert = "Invert";
-
-            Choices commands = new Choices(invert);
-
-            SemanticResultKey resultKey = new SemanticResultKey("invert", commands);
-
             GrammarBuilder image = "Image";
 
-            Choices text = new Choices(image);
-
+            Choices commands = new Choices(invert);
+            SemanticResultKey resultKey = new SemanticResultKey("invert", commands);
+           
             GrammarBuilder result = new GrammarBuilder(resultKey);
-            result.Append(text);
+            result.Append(image);
 
             Grammar grammar = new Grammar(result);
             grammar.Name = "Invert Image";
@@ -411,17 +393,17 @@ namespace VoiceRecognition
 
         private Grammar ColorFilterGrammar()
         {
-            // Add/Set Filter to Choices
+            // Add/Set Filter Choices
 
             GrammarBuilder addGrammar = "Add";
             GrammarBuilder setGrammar = "Set";
             GrammarBuilder filterGrammar = "Filter";
-            GrammarBuilder toGrammar = "To";
 
             Choices colorChoice = new Choices();
 
             foreach (string colorName in System.Enum.GetNames(typeof(KnownColor)))
             {
+                Console.WriteLine(colorName);
                 SemanticResultValue choiceResultValue = new SemanticResultValue(colorName, Color.FromName(colorName).ToArgb());
                 GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
                 colorChoice.Add(resultValueBuilder);
@@ -434,7 +416,6 @@ namespace VoiceRecognition
 
             GrammarBuilder result = new GrammarBuilder(alternatives);
             result.Append(filterGrammar);
-            result.Append(toGrammar);
             result.Append(resultContrast);
 
             Grammar grammar = new Grammar(result);
@@ -446,17 +427,13 @@ namespace VoiceRecognition
         {
             // Flip Image
             GrammarBuilder flip = "Flip";
-
-            Choices commands = new Choices(flip);
-
-            SemanticResultKey resultKey = new SemanticResultKey("flip", commands);
-
             GrammarBuilder image = "Image";
 
-            Choices text = new Choices(image);
+            Choices commands = new Choices(flip);
+            SemanticResultKey resultKey = new SemanticResultKey("flip", commands);
 
             GrammarBuilder result = new GrammarBuilder(resultKey);
-            result.Append(text);
+            result.Append(image);
 
             Grammar grammar = new Grammar(result);
             grammar.Name = "Flip Image";
@@ -486,19 +463,20 @@ namespace VoiceRecognition
 
         private Grammar UndoGrammar()
         {
-            // Undo
+            // Undo Actions
             GrammarBuilder undo = "Undo";
+            GrammarBuilder action = "Action";
 
             Choices commands = new Choices(undo);
 
             SemanticResultKey resultKey = new SemanticResultKey("undo", commands);
 
             GrammarBuilder result = new GrammarBuilder(resultKey);
+            result.Append(action);
 
             Grammar grammar = new Grammar(result);
             grammar.Name = "Undo Action";
             return grammar;
         }
-
     }
 }
