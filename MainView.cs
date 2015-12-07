@@ -7,9 +7,11 @@ using System.Speech.Recognition;
 using System.Speech.Synthesis;
 
 
-namespace VoiceRecognition {
+namespace VoiceRecognition
+{
 
-    public partial class MainView : Form {
+    public partial class MainView : Form
+    {
 
         private System.Speech.Recognition.SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
         private SpeechSynthesizer synthesizer = new SpeechSynthesizer();
@@ -21,13 +23,15 @@ namespace VoiceRecognition {
             )
         );
 
-        public MainView() {
+        public MainView()
+        {
             synthesizer.Speak("Booting the application.");
             InitializeComponent();
             imageList.Add(baseImage);
         }
 
-        private void MainView_Load(object sender, EventArgs e) {
+        private void MainView_Load(object sender, EventArgs e)
+        {
 
             engine.SetInputToDefaultAudioDevice();
             engine.UpdateRecognizerSetting("CFGConfidenceRejectionThreshold", 70);
@@ -71,7 +75,8 @@ namespace VoiceRecognition {
             synthesizer.Speak("Application ready.");
         }
 
-        void engineSpeechRecognizer(object sender, SpeechRecognizedEventArgs e) {
+        void engineSpeechRecognizer(object sender, SpeechRecognizedEventArgs e)
+        {
             SemanticValue semantics = e.Result.Semantics;
             //string rawText = e.Result.Text;
             //RecognitionResult result = e.Result();
@@ -105,21 +110,24 @@ namespace VoiceRecognition {
             else if (semantics.ContainsKey("flip"))
             {
                 Image lastImage = LastImage();
-                Image tmpImage = (Image) lastImage.Clone();
+                Image tmpImage = (Image)lastImage.Clone();
                 tmpImage.RotateFlip(RotateFlipType.Rotate180FlipY);
                 imageList.Add(tmpImage);
             }
             else if (semantics.ContainsKey("rotate"))
             {
                 Image lastImage = LastImage();
-                Image tmpImage = (Image) lastImage.Clone();
+                Image tmpImage = (Image)lastImage.Clone();
                 tmpImage.RotateFlip(RotateFlipType.Rotate90FlipY);
                 imageList.Add(tmpImage);
             }
-            else if (semantics.ContainsKey("undo")) {
-                if (imageList.Count > 1) {
+            else if (semantics.ContainsKey("undo"))
+            {
+                if (imageList.Count > 1)
+                {
                     imageList.RemoveAt(imageList.Count - 1);
-                } else {
+                }
+                else {
                     synthesizer.Speak("There is no more redo actions.");
                 }
             }
@@ -127,174 +135,181 @@ namespace VoiceRecognition {
             RenderImage();
         }
 
-        void RenderImage() {
+        void RenderImage()
+        {
             Image tmpImage = LastImage();
             this.pictureBox.Image = tmpImage;
         }
 
-        Image LastImage() {
+        Image LastImage()
+        {
             return imageList[imageList.Count - 1];
         }
 
         /* CONVERT METHODS */
-        Image void SetBrightness(int brightness)
-        {
-                Bitmap bmap = new Bitmap(LastImage());
-                 if (brightness < -255) brightness = -255;
-                 if (brightness > 255) brightness = 255;
-                 Color c;
-                 for (int i = 0; i < bmap.Width; i++)
-                 {
-                         for (int j = 0; j < bmap.Height; j++)
-                            {
-                                  c = bmap.GetPixel(i, j);
-                              int cR = c.R + brightness;
-                              int cG = c.G + brightness;
-                              int cB = c.B + brightness;
-
-                                if (cR < 0) cR = 1;
-                                if (cR > 255) cR = 255;
-
-                                if (cG < 0) cG = 1;
-                                if (cG > 255) cG = 255;
-
-                                if (cB < 0) cB = 1;
-                                if (cB > 255) cB = 255;
-
-                                bmap.SetPixel(i, j,
-                    Color.FromArgb((byte)cR, (byte)cG, (byte)cB));
-                            }
-                  }
-                  return (Image)bmap;
-        }
-
-        Image void SetContrast(double contrast)
-        {
-                Bitmap bmap = new Bitmap(LastImage());
-                if (contrast < -100) contrast = -100;
-                if (contrast > 100) contrast = 100;
-                contrast = (100.0 + contrast) / 100.0;
-                contrast *= contrast;
-                Color c;
-                for (int i = 0; i < bmap.Width; i++)
-                {
-                     for (int j = 0; j < bmap.Height; j++)
-                        {
-                              c = bmap.GetPixel(i, j);
-                              double pR = c.R / 255.0;
-                              pR -= 0.5;
-                              pR *= contrast;
-                            pR += 0.5;
-                            pR *= 255;
-                            if (pR < 0) pR = 0;
-                            if (pR > 255) pR = 255;
-
-                            double pG = c.G / 255.0;
-                            pG -= 0.5;
-                            pG *= contrast;
-                            pG += 0.5;
-                            pG *= 255;
-                            if (pG < 0) pG = 0;
-                            if (pG > 255) pG = 255;
-
-                            double pB = c.B / 255.0;
-                            pB -= 0.5;
-                            pB *= contrast;
-                            pB += 0.5;
-                            pB *= 255;
-                            if (pB < 0) pB = 0;
-                            if (pB > 255) pB = 255;
-
-                            bmap.SetPixel(i, j,Color.FromArgb((byte)pR, (byte)pG, (byte)pB));
-                        }
-                }
-                return (Image)bmap;
-        }
-
-        Image void SetGrayscale()
-        {
-                 Bitmap bmap = new Bitmap(LastImage());
-                 Color c;
-                 for (int i = 0; i < bmap.Width; i++)
-                 {
-                         for (int j = 0; j < bmap.Height; j++)
-                            {
-                                  c = bmap.GetPixel(i, j);
-                                  byte gray = (byte)(.299 * c.R + .587 * c.G + .114 * c.B);
-
-                                bmap.SetPixel(i, j, Color.FromArgb(gray, gray, gray));
-                            }
-                 }
-                 return (Image)bmap;
-        }
-
-        Image void SetInvert()
+        Image SetBrightness(int brightness)
         {
             Bitmap bmap = new Bitmap(LastImage());
+            if (brightness < -255) brightness = -255;
+            if (brightness > 255) brightness = 255;
             Color c;
             for (int i = 0; i < bmap.Width; i++)
-             {
-                 for (int j = 0; j < bmap.Height; j++)
-                    {
-                          c = bmap.GetPixel(i, j);
-                          bmap.SetPixel(i, j,
-            Color.FromArgb(255 - c.R, 255 - c.G, 255 - c.B));
-               }
+            {
+                for (int j = 0; j < bmap.Height; j++)
+                {
+                    c = bmap.GetPixel(i, j);
+                    int cR = c.R + brightness;
+                    int cG = c.G + brightness;
+                    int cB = c.B + brightness;
+
+                    if (cR < 0) cR = 1;
+                    if (cR > 255) cR = 255;
+
+                    if (cG < 0) cG = 1;
+                    if (cG > 255) cG = 255;
+
+                    if (cB < 0) cB = 1;
+                    if (cB > 255) cB = 255;
+
+                    bmap.SetPixel(i, j,
+        Color.FromArgb((byte)cR, (byte)cG, (byte)cB));
+                }
             }
             return (Image)bmap;
         }
 
-        public void SetColorFilter(ColorFilterTypes colorFilterType)
+        Image SetContrast(double contrast)
+        {
+            Bitmap bmap = new Bitmap(LastImage());
+            if (contrast < -100) contrast = -100;
+            if (contrast > 100) contrast = 100;
+            contrast = (100.0 + contrast) / 100.0;
+            contrast *= contrast;
+            Color c;
+            for (int i = 0; i < bmap.Width; i++)
+            {
+                for (int j = 0; j < bmap.Height; j++)
+                {
+                    c = bmap.GetPixel(i, j);
+                    double pR = c.R / 255.0;
+                    pR -= 0.5;
+                    pR *= contrast;
+                    pR += 0.5;
+                    pR *= 255;
+                    if (pR < 0) pR = 0;
+                    if (pR > 255) pR = 255;
+
+                    double pG = c.G / 255.0;
+                    pG -= 0.5;
+                    pG *= contrast;
+                    pG += 0.5;
+                    pG *= 255;
+                    if (pG < 0) pG = 0;
+                    if (pG > 255) pG = 255;
+
+                    double pB = c.B / 255.0;
+                    pB -= 0.5;
+                    pB *= contrast;
+                    pB += 0.5;
+                    pB *= 255;
+                    if (pB < 0) pB = 0;
+                    if (pB > 255) pB = 255;
+
+                    bmap.SetPixel(i, j, Color.FromArgb((byte)pR, (byte)pG, (byte)pB));
+                }
+            }
+            return (Image)bmap;
+        }
+
+        Image SetGrayscale()
         {
             Bitmap bmap = new Bitmap(LastImage());
             Color c;
             for (int i = 0; i < bmap.Width; i++)
             {
-            for (int j = 0; j < bmap.Height; j++)
-            {
-                         c = bmap.GetPixel(i, j);
-                          int nPixelR = 0;
-                          int nPixelG = 0;
-                          int nPixelB = 0;
-                          if (colorFilterType == ColorFilterTypes.Red)
-                          {
-                                  nPixelR = c.R;
-                                  nPixelG = c.G - 255;
-                                      nPixelB = c.B - 255;
-                          }
-                          else if (colorFilterType == ColorFilterTypes.Green)
-                          {
-                                  nPixelR = c.R - 255;
-                             nPixelG = c.G;
-                                    nPixelB = c.B - 255;
-                          }
-                          else if (colorFilterType == ColorFilterTypes.Blue)
-                          {
-                                    nPixelR = c.R - 255;
-                                    nPixelG = c.G - 255;
-                                    nPixelB = c.B;
-                          }
-                          nPixelR = Math.Max(nPixelR, 0);
-                          nPixelR = Math.Min(255, nPixelR);
+                for (int j = 0; j < bmap.Height; j++)
+                {
+                    c = bmap.GetPixel(i, j);
+                    byte gray = (byte)(.299 * c.R + .587 * c.G + .114 * c.B);
 
-                          nPixelG = Math.Max(nPixelG, 0);
-                          nPixelG = Math.Min(255, nPixelG);
-
-                          nPixelB = Math.Max(nPixelB, 0);
-                          nPixelB = Math.Min(255, nPixelB);
-
-                          bmap.SetPixel(i, j, Color.FromArgb((byte)nPixelR,
-                            (byte)nPixelG, (byte)nPixelB));
-                    }
+                    bmap.SetPixel(i, j, Color.FromArgb(gray, gray, gray));
                 }
-                return (Image)bmap;
+            }
+            return (Image)bmap;
+        }
+
+        Image SetInvert()
+        {
+            Bitmap bmap = new Bitmap(LastImage());
+            Color c;
+            for (int i = 0; i < bmap.Width; i++)
+            {
+                for (int j = 0; j < bmap.Height; j++)
+                {
+                    c = bmap.GetPixel(i, j);
+                    bmap.SetPixel(i, j, Color.FromArgb(255 - c.R, 255 - c.G, 255 - c.B));
+                }
+            }
+            return (Image)bmap;
+        }
+
+        Image SetColorFilter(Color color)
+        {
+            Bitmap bmap = new Bitmap(LastImage());
+            Color c;
+            for (int i = 0; i < bmap.Width; i++)
+            {
+                for (int j = 0; j < bmap.Height; j++)
+                {
+                    c = bmap.GetPixel(i, j);
+                    int nPixelR = 0;
+                    int nPixelG = 0;
+                    int nPixelB = 0;
+
+                    nPixelR = c.R - (255 - color.R);
+                    nPixelG = c.G - (255 - color.G);
+                    nPixelB = c.B - (255 - color.B);
+                    //if (color == Color.Red)
+                    //{
+                    //    nPixelR = c.R;
+                    //    nPixelG = c.G - 255;
+                    //    nPixelB = c.B - 255;
+                    //}
+                    //else if (color == Color.Green)
+                    //{
+                    //    nPixelR = c.R - 255;
+                    //    nPixelG = c.G;
+                    //    nPixelB = c.B - 255;
+                    //}
+                    //else if (color == Color.Blue)
+                    //{
+                    //    nPixelR = c.R - 255;
+                    //    nPixelG = c.G - 255;
+                    //    nPixelB = c.B;
+                    //}
+                    nPixelR = Math.Max(nPixelR, 0);
+                    nPixelR = Math.Min(255, nPixelR);
+
+                    nPixelG = Math.Max(nPixelG, 0);
+                    nPixelG = Math.Min(255, nPixelG);
+
+                    nPixelB = Math.Max(nPixelB, 0);
+                    nPixelB = Math.Min(255, nPixelB);
+
+                    bmap.SetPixel(i, j, Color.FromArgb((byte)nPixelR,
+                    (byte)nPixelG, (byte)nPixelB));
+                }
+            }
+            return (Image)bmap;
         }
 
         /* GRAMMARS */
-        private Grammar ContrastGrammar() {
+        private Grammar ContrastGrammar()
+        {
             // Change/Set Contrast to Choices
             var choices = new Choices();
-            for (var i = -100; i <= 100; i++) {
+            for (var i = -100; i <= 100; i++)
+            {
                 choices.Add(i.ToString());
             }
 
@@ -308,7 +323,6 @@ namespace VoiceRecognition {
             GrammarBuilder resultContrast = new GrammarBuilder(resultKey);
 
             Choices alternatives = new Choices(changeGrammar, setGrammar);
-            Choices commands = new Choices(grayscaleGrammar);
 
             GrammarBuilder result = new GrammarBuilder(alternatives);
             result.Append(contrastGrammar);
@@ -320,10 +334,12 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar BrightnessGrammar() {
+        private Grammar BrightnessGrammar()
+        {
             // Change/Set Brightness to Choices
             var choices = new Choices();
-            for (var i = -255; i <= 255; i++) {
+            for (var i = -255; i <= 255; i++)
+            {
                 choices.Add(i.ToString());
             }
 
@@ -337,7 +353,6 @@ namespace VoiceRecognition {
             GrammarBuilder resultContrast = new GrammarBuilder(resultKey);
 
             Choices alternatives = new Choices(changeGrammar, setGrammar);
-            Choices commands = new Choices(grayscaleGrammar);
 
             GrammarBuilder result = new GrammarBuilder(alternatives);
             result.Append(brightnessGrammar);
@@ -349,7 +364,8 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar GrayscaleGrammar() {
+        private Grammar GrayscaleGrammar()
+        {
             // Change/Convert to grayscale
 
             GrammarBuilder changeGrammar = "Change";
@@ -372,7 +388,8 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar InvertGrammar() {
+        private Grammar InvertGrammar()
+        {
             // Invert Image
             GrammarBuilder invert = "Invert";
 
@@ -392,7 +409,8 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar ColorFilterGrammar() {
+        private Grammar ColorFilterGrammar()
+        {
             // Add/Set Filter to Choices
 
             GrammarBuilder addGrammar = "Add";
@@ -404,9 +422,9 @@ namespace VoiceRecognition {
 
             foreach (string colorName in System.Enum.GetNames(typeof(KnownColor)))
             {
-               SemanticResultValue choiceResultValue = new SemanticResultValue(colorName, Color.FromName(colorName).ToArgb());
-               GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
-               colorChoice.Add(resultValueBuilder);
+                SemanticResultValue choiceResultValue = new SemanticResultValue(colorName, Color.FromName(colorName).ToArgb());
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                colorChoice.Add(resultValueBuilder);
             }
 
             SemanticResultKey resultKey = new SemanticResultKey("colorFilter", colorChoice);
@@ -424,7 +442,8 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar FlipGrammar() {
+        private Grammar FlipGrammar()
+        {
             // Flip Image
             GrammarBuilder flip = "Flip";
 
@@ -444,7 +463,8 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar RotateGrammar() {
+        private Grammar RotateGrammar()
+        {
             // Rotate Image
             GrammarBuilder rotate = "Rotate";
 
@@ -464,7 +484,8 @@ namespace VoiceRecognition {
             return grammar;
         }
 
-        private Grammar UndoGrammar() {
+        private Grammar UndoGrammar()
+        {
             // Undo
             GrammarBuilder undo = "Undo";
 
