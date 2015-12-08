@@ -127,7 +127,7 @@ namespace VoiceRecognition
                     this.statusLabel.Text = text;
                     synthesizer.Speak(text);
                 }
-                
+
             }
             else if (!isCroping)
             {
@@ -219,7 +219,7 @@ namespace VoiceRecognition
             RenderImage();
         }
 
-        // HELPERS 
+        // HELPERS
         void RenderImage()
         {
             Image tmpImage = LastImage();
@@ -430,7 +430,7 @@ namespace VoiceRecognition
 
         private Grammar CropGrammar()
         {
-            // Cancel Crop
+            // Crop Image
             GrammarBuilder crop = "Crop";
             GrammarBuilder image = "Image";
 
@@ -469,9 +469,6 @@ namespace VoiceRecognition
             // Change/Set Crop Position to X and Y
             var choicesX = new Choices();
             var choicesY = new Choices();
-
-            Console.WriteLine(LastImage().Width);
-            Console.WriteLine(LastImage().Height);
 
             for (var i = 0; i <= LastImage().Width; i++)
             {
@@ -663,7 +660,7 @@ namespace VoiceRecognition
 
             Choices commands = new Choices(invert);
             SemanticResultKey resultKey = new SemanticResultKey("invert", commands);
-           
+
             GrammarBuilder result = new GrammarBuilder(resultKey);
             result.Append(image);
 
@@ -675,7 +672,6 @@ namespace VoiceRecognition
         private Grammar ColorFilterGrammar()
         {
             // Add/Set Filter Choices
-
             GrammarBuilder addGrammar = "Add";
             GrammarBuilder setGrammar = "Set";
             GrammarBuilder filterGrammar = "Filter";
