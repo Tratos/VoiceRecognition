@@ -67,6 +67,10 @@ namespace VoiceRecognition
             cropPositionGrammar.Enabled = true;
             engine.LoadGrammar(cropPositionGrammar);
 
+            Grammar cropWidthAndHeigthGrammar = CropWidthAndHeigthGrammar();
+            cropWidthAndHeigthGrammar.Enabled = true;
+            engine.LoadGrammar(cropWidthAndHeigthGrammar);
+
             Grammar cropCancelGrammar = CropCancelGrammar();
             cropCancelGrammar.Enabled = true;
             engine.LoadGrammar(cropCancelGrammar);
@@ -192,6 +196,14 @@ namespace VoiceRecognition
                 {
                     cropX = (int)semantics["crop_position_x"].Value;
                     cropY = (int)semantics["crop_position_y"].Value;
+                    RemoveImage();
+                    Image tmpImage = DrawOutCropArea(cropX, cropY, cropWidth, cropHeight);
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("crop_width") || semantics.ContainsKey("crop_height"))
+                {
+                    cropWidth = (int)semantics["crop_width"].Value;
+                    cropHeight = (int)semantics["crop_height"].Value;
                     RemoveImage();
                     Image tmpImage = DrawOutCropArea(cropX, cropY, cropWidth, cropHeight);
                     SetImageAndText(tmpImage, rawText);
@@ -500,6 +512,60 @@ namespace VoiceRecognition
 
             Grammar grammar = new Grammar(result);
             grammar.Name = "Set Crop Position";
+            return grammar;
+        }
+
+        private Grammar CropWidthAndHeigthGrammar()
+        {
+            // Change/Set Crop Width to X and Height to Y
+            var choicesWidth = new Choices();
+            var choicesHeight = new Choices();
+
+            Console.WriteLine(LastImage().Width);
+            Console.WriteLine(LastImage().Height);
+
+            for (var i = 0; i <= LastImage().Width; i++)
+            {
+                SemanticResultValue choiceResultValue = new SemanticResultValue(i.ToString(), i);
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                choicesWidth.Add(resultValueBuilder);
+            }
+
+            for (var i = 0; i <= LastImage().Height; i++)
+            {
+                SemanticResultValue choiceResultValue = new SemanticResultValue(i.ToString(), i);
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                choicesHeight.Add(resultValueBuilder);
+            }
+
+            GrammarBuilder changeGrammar = "Change";
+            GrammarBuilder setGrammar = "Set";
+            GrammarBuilder cropGrammar = "Crop";
+            GrammarBuilder widthGrammar = "Width";
+            GrammarBuilder heightGrammar = "Height";
+            GrammarBuilder toGrammar = "To";
+            GrammarBuilder andGrammar = "And";
+
+            SemanticResultKey resultKeyWidth = new SemanticResultKey("crop_width", choicesWidth);
+            GrammarBuilder resultCropWidth = new GrammarBuilder(resultKeyWidth);
+
+            SemanticResultKey resultKeyHeight = new SemanticResultKey("crop_height", choicesHeight);
+            GrammarBuilder resultCropHeight = new GrammarBuilder(resultKeyHeight);
+
+            Choices alternatives = new Choices(changeGrammar, setGrammar);
+
+            GrammarBuilder result = new GrammarBuilder(alternatives);
+            result.Append(cropGrammar);
+            result.Append(widthGrammar);
+            result.Append(toGrammar);
+            result.Append(resultCropWidth);
+            result.Append(andGrammar);
+            result.Append(heightGrammar);
+            result.Append(toGrammar);
+            result.Append(resultCropHeight);
+
+            Grammar grammar = new Grammar(result);
+            grammar.Name = "Set Crop Width And Height";
             return grammar;
         }
 
