@@ -23,6 +23,13 @@ namespace VoiceRecognition
             )
         );
 
+        // Crop Logic
+        private Boolean isCroping = false;
+        private int cropX = 0;
+        private int cropY = 0;
+        private int cropWidth = 0;
+        private int cropHeight = 0;
+
         public MainView()
         {
             synthesizer.Speak("Booting the application.");
@@ -35,7 +42,34 @@ namespace VoiceRecognition
 
             engine.SetInputToDefaultAudioDevice();
             engine.UpdateRecognizerSetting("CFGConfidenceRejectionThreshold", 70);
+
+            LoadAllGrammars();
+
+            engine.RecognizeAsync(RecognizeMode.Multiple);
+            engine.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(engineSpeechRecognizer);
+
+            synthesizer.Speak("Application ready.");
+        }
+
+        private void LoadAllGrammars()
+        {
             engine.UnloadAllGrammars();
+
+            Grammar initCropGrammar = InitCropGrammar();
+            initCropGrammar.Enabled = true;
+            engine.LoadGrammar(initCropGrammar);
+
+            Grammar cropGrammar = CropGrammar();
+            cropGrammar.Enabled = true;
+            engine.LoadGrammar(cropGrammar);
+
+            Grammar cropPositionGrammar = CropPositionGrammar();
+            cropPositionGrammar.Enabled = true;
+            engine.LoadGrammar(cropPositionGrammar);
+
+            Grammar cropCancelGrammar = CropCancelGrammar();
+            cropCancelGrammar.Enabled = true;
+            engine.LoadGrammar(cropCancelGrammar);
 
             Grammar brightnessGrammar = BrightnessGrammar();
             brightnessGrammar.Enabled = true;
@@ -68,79 +102,127 @@ namespace VoiceRecognition
             Grammar undoGrammar = UndoGrammar();
             undoGrammar.Enabled = true;
             engine.LoadGrammar(undoGrammar);
-
-            engine.RecognizeAsync(RecognizeMode.Multiple);
-            engine.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(engineSpeechRecognizer);
-
-            synthesizer.Speak("Application ready.");
         }
 
         void engineSpeechRecognizer(object sender, SpeechRecognizedEventArgs e)
         {
             SemanticValue semantics = e.Result.Semantics;
             string rawText = e.Result.Text;
-            // RecognitionResult result = e.Result;
 
-            this.statusLabel.Text = rawText;
-
-            if (semantics.ContainsKey("brightness"))
+            if (semantics.ContainsKey("undo"))
             {
-                Image tmpImage = SetBrightness((int)semantics["brightness"].Value);
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("contrast"))
-            {
-                Image tmpImage = SetContrast(Convert.ToDouble(semantics["contrast"].Value));
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("grayscale"))
-            {
-                Image tmpImage = SetGrayscale();
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("invert"))
-            {
-                Image tmpImage = SetInvert();
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("colorFilter"))
-            {
-                Color color = Color.FromArgb((int)semantics["colorFilter"].Value);
-                Image tmpImage = SetColorFilter(color);
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("flip"))
-            {
-                Image lastImage = LastImage();
-                Image tmpImage = (Image)lastImage.Clone();
-                tmpImage.RotateFlip(RotateFlipType.Rotate180FlipY);
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("rotate"))
-            {
-                Image lastImage = LastImage();
-                Image tmpImage = (Image)lastImage.Clone();
-                tmpImage.RotateFlip(RotateFlipType.Rotate90FlipY);
-                imageList.Add(tmpImage);
-            }
-            else if (semantics.ContainsKey("undo"))
-            {
+                isCroping = false;
                 if (imageList.Count > 1)
                 {
-                    imageList.RemoveAt(imageList.Count - 1);
+                    RemoveImage();
+                    this.statusLabel.Text = rawText;
                 }
-                else {
-                    synthesizer.Speak("There is no more undo actions.");
+                else
+                {
+                    var text = "There are no more undo actions.";
+                    this.statusLabel.Text = text;
+                    synthesizer.Speak(text);
+                }
+                
+            }
+            else if (!isCroping)
+            {
+                if (semantics.ContainsKey("init_crop"))
+                {
+                    isCroping = true;
+                    LoadAllGrammars();
+                    cropX = LastImage().Width / 4;
+                    cropY = LastImage().Height / 4;
+                    cropWidth = LastImage().Width / 2;
+                    cropHeight = LastImage().Height / 2;
+                    Image tmpImage = DrawOutCropArea(cropX, cropY, cropWidth, cropHeight);
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("brightness"))
+                {
+                    Image tmpImage = SetBrightness((int)semantics["brightness"].Value);
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("contrast"))
+                {
+                    Image tmpImage = SetContrast(Convert.ToDouble(semantics["contrast"].Value));
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("grayscale"))
+                {
+                    Image tmpImage = SetGrayscale();
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("invert"))
+                {
+                    Image tmpImage = SetInvert();
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("colorFilter"))
+                {
+                    Color color = Color.FromArgb((int)semantics["colorFilter"].Value);
+                    Image tmpImage = SetColorFilter(color);
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("flip"))
+                {
+                    Image lastImage = LastImage();
+                    Image tmpImage = (Image)lastImage.Clone();
+                    tmpImage.RotateFlip(RotateFlipType.Rotate180FlipY);
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("rotate"))
+                {
+                    Image lastImage = LastImage();
+                    Image tmpImage = (Image)lastImage.Clone();
+                    tmpImage.RotateFlip(RotateFlipType.Rotate90FlipY);
+                    SetImageAndText(tmpImage, rawText);
+                }
+            }
+            else
+            {
+                if (semantics.ContainsKey("crop"))
+                {
+                    Image tmpImage = Crop(cropX, cropY, cropWidth, cropHeight);
+                    RemoveImage();
+                    SetImageAndText(tmpImage, rawText);
+                    isCroping = false;
+                }
+                else if (semantics.ContainsKey("crop_position_x") || semantics.ContainsKey("crop_position_y"))
+                {
+                    cropX = (int)semantics["crop_position_x"].Value;
+                    cropY = (int)semantics["crop_position_y"].Value;
+                    RemoveImage();
+                    Image tmpImage = DrawOutCropArea(cropX, cropY, cropWidth, cropHeight);
+                    SetImageAndText(tmpImage, rawText);
+                }
+                else if (semantics.ContainsKey("cancel_crop"))
+                {
+                    RemoveImage();
+                    this.statusLabel.Text = rawText;
+                    isCroping = false;
                 }
             }
 
             RenderImage();
         }
 
+        // HELPERS 
         void RenderImage()
         {
             Image tmpImage = LastImage();
             this.pictureBox.Image = tmpImage;
+        }
+
+        void SetImageAndText(Image image, String text)
+        {
+            imageList.Add(image);
+            this.statusLabel.Text = text;
+        }
+
+        void RemoveImage()
+        {
+            imageList.RemoveAt(imageList.Count - 1);
         }
 
         Image LastImage()
@@ -149,6 +231,34 @@ namespace VoiceRecognition
         }
 
         /* CONVERT METHODS */
+        Image DrawOutCropArea(int xPosition, int yPosition, int width, int height)
+        {
+            Bitmap bmap = new Bitmap(LastImage());
+            Graphics gr = Graphics.FromImage(bmap);
+            Brush cBrush = new Pen(Color.FromArgb(150, Color.White)).Brush;
+            Rectangle rect1 = new Rectangle(0, 0, LastImage().Width, yPosition);
+            Rectangle rect2 = new Rectangle(0, yPosition, xPosition, height);
+            Rectangle rect3 = new Rectangle
+            (0, (yPosition + height), LastImage().Width, LastImage().Height);
+            Rectangle rect4 = new Rectangle((xPosition + width), yPosition, (LastImage().Width - xPosition - width), height);
+            gr.FillRectangle(cBrush, rect1);
+            gr.FillRectangle(cBrush, rect2);
+            gr.FillRectangle(cBrush, rect3);
+            gr.FillRectangle(cBrush, rect4);
+            return (Image)bmap;
+        }
+
+        Image Crop(int xPosition, int yPosition, int width, int height)
+        {
+            Bitmap bmap = new Bitmap(LastImage());
+            if (xPosition + width > LastImage().Width)
+                width = LastImage().Width - xPosition;
+            if (yPosition + height > LastImage().Height)
+                height = LastImage().Height - yPosition;
+            Rectangle rect = new Rectangle(xPosition, yPosition, width, height);
+            return (Image)bmap.Clone(rect, bmap.PixelFormat);
+        }
+
         Image SetBrightness(int brightness)
         {
             Bitmap bmap = new Bitmap(LastImage());
@@ -288,6 +398,111 @@ namespace VoiceRecognition
         }
 
         /* GRAMMARS */
+        private Grammar InitCropGrammar()
+        {
+            // Init Crop
+            GrammarBuilder init = "Init";
+            GrammarBuilder crop = "Crop";
+
+            Choices commands = new Choices(init);
+
+            SemanticResultKey resultKey = new SemanticResultKey("init_crop", commands);
+
+            GrammarBuilder result = new GrammarBuilder(resultKey);
+            result.Append(crop);
+
+            Grammar grammar = new Grammar(result);
+            grammar.Name = "Init Crop";
+            return grammar;
+        }
+
+        private Grammar CropGrammar()
+        {
+            // Cancel Crop
+            GrammarBuilder crop = "Crop";
+            GrammarBuilder image = "Image";
+
+            Choices commands = new Choices(crop);
+
+            SemanticResultKey resultKey = new SemanticResultKey("crop", commands);
+
+            GrammarBuilder result = new GrammarBuilder(resultKey);
+            result.Append(image);
+
+            Grammar grammar = new Grammar(result);
+            grammar.Name = "Crop Image";
+            return grammar;
+        }
+
+        private Grammar CropCancelGrammar()
+        {
+            // Cancel Crop
+            GrammarBuilder cancel = "Cancel";
+            GrammarBuilder crop = "Crop";
+
+            Choices commands = new Choices(cancel);
+
+            SemanticResultKey resultKey = new SemanticResultKey("cancel_crop", commands);
+
+            GrammarBuilder result = new GrammarBuilder(resultKey);
+            result.Append(crop);
+
+            Grammar grammar = new Grammar(result);
+            grammar.Name = "Cancel Crop";
+            return grammar;
+        }
+
+        private Grammar CropPositionGrammar()
+        {
+            // Change/Set Crop Position to X and Y
+            var choicesX = new Choices();
+            var choicesY = new Choices();
+
+            Console.WriteLine(LastImage().Width);
+            Console.WriteLine(LastImage().Height);
+
+            for (var i = 0; i <= LastImage().Width; i++)
+            {
+                SemanticResultValue choiceResultValue = new SemanticResultValue(i.ToString(), i);
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                choicesX.Add(resultValueBuilder);
+            }
+
+            for (var i = 0; i <= LastImage().Height; i++)
+            {
+                SemanticResultValue choiceResultValue = new SemanticResultValue(i.ToString(), i);
+                GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+                choicesY.Add(resultValueBuilder);
+            }
+
+            GrammarBuilder changeGrammar = "Change";
+            GrammarBuilder setGrammar = "Set";
+            GrammarBuilder cropGrammar = "Crop";
+            GrammarBuilder positionGrammar = "Position";
+            GrammarBuilder toGrammar = "To";
+            GrammarBuilder andGrammar = "And";
+
+            SemanticResultKey resultKeyX = new SemanticResultKey("crop_position_x", choicesX);
+            GrammarBuilder resultCropX = new GrammarBuilder(resultKeyX);
+
+            SemanticResultKey resultKeyY = new SemanticResultKey("crop_position_y", choicesY);
+            GrammarBuilder resultCropY = new GrammarBuilder(resultKeyY);
+
+            Choices alternatives = new Choices(changeGrammar, setGrammar);
+
+            GrammarBuilder result = new GrammarBuilder(alternatives);
+            result.Append(cropGrammar);
+            result.Append(positionGrammar);
+            result.Append(toGrammar);
+            result.Append(resultCropX);
+            result.Append(andGrammar);
+            result.Append(resultCropY);
+
+            Grammar grammar = new Grammar(result);
+            grammar.Name = "Set Crop Position";
+            return grammar;
+        }
+
         private Grammar BrightnessGrammar()
         {
             // Change/Set Brightness to Choices
@@ -403,7 +618,6 @@ namespace VoiceRecognition
 
             foreach (string colorName in System.Enum.GetNames(typeof(KnownColor)))
             {
-                Console.WriteLine(colorName);
                 SemanticResultValue choiceResultValue = new SemanticResultValue(colorName, Color.FromName(colorName).ToArgb());
                 GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
                 colorChoice.Add(resultValueBuilder);
